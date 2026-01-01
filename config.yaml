@@ -1,0 +1,7 @@
+micro:
+  registry: consul
+  registry_addr: "http://47.113.220.106:8500"
+  course_service_name: "edu-course"
+
+http:
+  address: ":8083"
