@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	grpcClient "github.com/go-micro/plugins/v4/client/grpc"
+	consulRegistry "github.com/go-micro/plugins/v4/registry/consul"
 	"github.com/haoyunfeng/edu-course-client/internal/config"
-	"github.com/haoyunfeng/edu-course-client/internal/registry"
 	coursepb "github.com/haoyunfeng/edu-course-proto/pb"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/client"
@@ -31,17 +32,27 @@ type CourseService struct {
 func NewCourseService(cfg *config.Config) (*CourseService, error) {
 	// 根据配置选择注册中心
 	var reg microRegistry.Registry
-	var err error
 	switch cfg.Micro.Registry {
 	case "consul":
 		// 使用 Consul 作为注册中心
 		if cfg.Micro.RegistryAddr == "" {
 			return nil, fmt.Errorf("consul registry address is required")
 		}
-		reg, err = registry.NewConsulRegistry(cfg.Micro.RegistryAddr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create consul registry: %w", err)
+		// 解析地址（移除 http:// 前缀）
+		addr := cfg.Micro.RegistryAddr
+		if strings.HasPrefix(addr, "http://") {
+			addr = strings.TrimPrefix(addr, "http://")
 		}
+		if strings.HasPrefix(addr, "https://") {
+			addr = strings.TrimPrefix(addr, "https://")
+		}
+		// 移除末尾的斜杠
+		addr = strings.TrimSuffix(addr, "/")
+
+		// 使用官方的 Consul registry 插件
+		reg = consulRegistry.NewRegistry(
+			microRegistry.Addrs(addr),
+		)
 	case "mdns":
 		// 使用 mDNS 作为注册中心（默认）
 		fallthrough
